@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+venv/
+env/
+.venv/
+
+# Local secrets
+.env
+*.env
+
+# Google service account keys / credentials
+*.json
+github-actions-sa.json
+
+# VS Code / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
