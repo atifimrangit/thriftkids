@@ -1,6 +1,60 @@
+<!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>ThriftKids Demo</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; }
+      .listing { border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;}
+    </style>
+  </head>
   <body>
-    <h1>ThriftKids — Demo App</h1>
-    <p>Backend running successfully!</p>
+    <h1>ThriftKids — Demo</h1>
+
+    <h3>Create Listing</h3>
+    <form id="form" enctype="multipart/form-data">
+      <input name="title" placeholder="Title" required /><br/><br/>
+      <input name="size" placeholder="Size (e.g., 6-12m)"/><br/><br/>
+      <input name="age_group" placeholder="Age Group"/><br/><br/>
+      <input name="condition" placeholder="Condition (seller)"/><br/><br/>
+      <textarea name="notes" placeholder="Notes"></textarea><br/><br/>
+      <input type="file" name="image" accept="image/*" required/><br/><br/>
+      <button type="submit">Create Listing</button>
+    </form>
+
+    <h3>Listings</h3>
+    <div id="listings">Loading...</div>
+
+    <script>
+    async function fetchListings(){
+      const res = await fetch('/api/listings');
+      const data = await res.json();
+      const el = document.getElementById('listings');
+      if (!data || data.length === 0) { el.innerHTML = '<p>No listings yet</p>'; return; }
+      el.innerHTML = data.map(it => `
+        <div class="listing">
+          ${it.image_url ? `<img src="${it.image_url}" width="140"><br/>` : ''}
+          <b>${it.title}</b><br/>
+          <small>${it.size} • ${it.age_group} • ${it.condition}</small>
+          <p>${it.description}</p>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const res = await fetch('/api/listings', { method: 'POST', body: fd });
+      if (res.ok) {
+        alert('Listing created');
+        e.target.reset();
+        fetchListings();
+      } else {
+        alert('Create failed');
+      }
+    };
+
+    fetchListings();
+    </script>
   </body>
 </html>
