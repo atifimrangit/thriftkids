@@ -1,60 +1,245 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>ThriftKids Demo</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 24px; }
-      .listing { border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;}
-    </style>
-  </head>
-  <body>
-    <h1>ThriftKids — Demo</h1>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ThriftKids — Demo</title>
 
-    <h3>Create Listing</h3>
-    <form id="form" enctype="multipart/form-data">
-      <input name="title" placeholder="Title" required /><br/><br/>
-      <input name="size" placeholder="Size (e.g., 6-12m)"/><br/><br/>
-      <input name="age_group" placeholder="Age Group"/><br/><br/>
-      <input name="condition" placeholder="Condition (seller)"/><br/><br/>
-      <textarea name="notes" placeholder="Notes"></textarea><br/><br/>
-      <input type="file" name="image" accept="image/*" required/><br/><br/>
-      <button type="submit">Create Listing</button>
-    </form>
+  <!-- Bootstrap 5 CDN (quick, no build) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Small custom styles */
+    body { background: #f8f9fa; }
+    .container-main { max-width: 1100px; margin: 24px auto; }
+    .card-listing { min-height: 260px; display:flex; flex-direction:column; }
+    .card-img-top { object-fit: cover; height: 220px; }
+    .meta { color: #6c757d; font-size: 0.95rem; }
+    .small-note { color:#495057; }
+    .form-section { background: #ffffff; border-radius: 8px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .preview-img { max-height: 160px; object-fit: contain; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="container-main">
+    <header class="mb-4">
+      <h1 class="h2">ThriftKids — <small class="text-muted">Demo</small></h1>
+      <p class="text-muted">Buy & sell gently used kids clothes — demo app for Build & Blog.</p>
+    </header>
 
-    <h3>Listings</h3>
-    <div id="listings">Loading...</div>
+    <div class="row g-4">
+      <!-- Left: Form -->
+      <div class="col-12 col-lg-5">
+        <section class="form-section">
+          <h4 class="mb-3">Create Listing</h4>
+          <form id="listingForm" class="needs-validation" novalidate>
+            <div class="mb-2">
+              <label class="form-label visually-hidden">Title</label>
+              <input name="title" id="title" class="form-control" placeholder="Title (required)" required>
+              <div class="invalid-feedback">Please enter a title.</div>
+            </div>
 
-    <script>
-    async function fetchListings(){
-      const res = await fetch('/api/listings');
-      const data = await res.json();
-      const el = document.getElementById('listings');
-      if (!data || data.length === 0) { el.innerHTML = '<p>No listings yet</p>'; return; }
-      el.innerHTML = data.map(it => `
-        <div class="listing">
-          ${it.image_url ? `<img src="${it.image_url}" width="140"><br/>` : ''}
-          <b>${it.title}</b><br/>
-          <small>${it.size} • ${it.age_group} • ${it.condition}</small>
-          <p>${it.description}</p>
-        </div>
-      `).join('');
+            <div class="row g-2 mb-2">
+              <div class="col">
+                <input name="size" id="size" class="form-control" placeholder="Size (e.g., 6-12m)">
+              </div>
+              <div class="col">
+                <input name="age_group" id="age_group" class="form-control" placeholder="Age Group">
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <input name="condition" id="condition" class="form-control" placeholder="Condition (seller)">
+            </div>
+
+            <div class="mb-2">
+              <textarea name="notes" id="notes" class="form-control" rows="2" placeholder="Notes (optional)"></textarea>
+            </div>
+
+            <div class="mb-2">
+              <label for="description" class="form-label">Description (optional)</label>
+              <textarea id="description" name="description" class="form-control" rows="3" maxlength="500" placeholder="Enter a short description (or leave empty for AI-generated)"></textarea>
+              <div class="d-flex justify-content-between mt-1">
+                <small id="desc-count" class="text-muted">0 / 500</small>
+                <small class="text-muted">Tip: manual text prevents AI call.</small>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Image</label>
+              <input type="file" id="image" name="image" class="form-control" accept="image/*" required>
+              <div class="invalid-feedback">Please choose an image.</div>
+              <div class="mt-2">
+                <img id="imgPreview" class="preview-img d-none" alt="Preview"/>
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <button id="submitBtn" class="btn btn-primary" type="submit">Create Listing</button>
+            </div>
+
+            <div id="formMsg" class="mt-2" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Right: Listings -->
+      <div class="col-12 col-lg-7">
+        <section>
+          <h4 class="mb-3">Listings</h4>
+          <div id="listingsGrid" class="row g-3">
+            <!-- listings injected here -->
+          </div>
+          <div id="empty" class="alert alert-light mt-3" style="display:none;">
+            No listings yet — create one using the form.
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <footer class="mt-5 text-center text-muted small">
+      Demo app • Keep <code>USE_AGENT=false</code> in Cloud Run for live demos to avoid AI calls.
+    </footer>
+  </div>
+
+  <!-- Bootstrap + small helper script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // helper: format small meta line
+    function metaText(listing) {
+      const size = listing.size || "";
+      const age = listing.age_group || "";
+      const cond = listing.condition || "";
+      // join with dot separators but only show available parts
+      return [size, age, cond].filter(Boolean).join(" • ");
     }
 
-    document.getElementById('form').onsubmit = async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const res = await fetch('/api/listings', { method: 'POST', body: fd });
-      if (res.ok) {
-        alert('Listing created');
-        e.target.reset();
-        fetchListings();
-      } else {
-        alert('Create failed');
-      }
-    };
+    // render a listing card
+    function renderCard(listing) {
+      const col = document.createElement('div');
+      col.className = 'col-12';
+      const card = document.createElement('div');
+      card.className = 'card card-listing shadow-sm';
+      const imgSrc = listing.image_url || 'https://via.placeholder.com/400x400.png?text=No+Image';
+      card.innerHTML = `
+        <img src="${imgSrc}" class="card-img-top" alt="${listing.title || 'Item'}">
+        <div class="card-body">
+          <h5 class="card-title mb-1">${listing.title || 'Untitled'}</h5>
+          <div class="meta mb-3">${metaText(listing)}</div>
+          <p class="card-text small-note">${listing.description || ''}</p>
+        </div>`;
+      col.appendChild(card);
+      return col;
+    }
 
-    fetchListings();
-    </script>
-  </body>
+    // fetch listings from backend
+    async function fetchListings() {
+      const res = await fetch('/api/listings');
+      if (!res.ok) return [];
+      try {
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    // populate grid
+    async function loadListings() {
+      const grid = document.getElementById('listingsGrid');
+      grid.innerHTML = '';
+      const listings = await fetchListings();
+      if (!listings.length) {
+        document.getElementById('empty').style.display = 'block';
+        return;
+      } else {
+        document.getElementById('empty').style.display = 'none';
+      }
+      listings.forEach(l => grid.appendChild(renderCard(l)));
+    }
+
+    // form behavior: preview + submit
+    document.addEventListener('DOMContentLoaded', function(){
+      loadListings();
+
+      const form = document.getElementById('listingForm');
+      const imageInput = document.getElementById('image');
+      const imgPreview = document.getElementById('imgPreview');
+      const desc = document.getElementById('description');
+      const descCount = document.getElementById('desc-count');
+      const submitBtn = document.getElementById('submitBtn');
+      const formMsg = document.getElementById('formMsg');
+
+      // description counter
+      desc.addEventListener('input', () => {
+        descCount.textContent = `${desc.value.length} / ${desc.maxLength}`;
+      });
+
+      // image preview
+      imageInput.addEventListener('change', (ev) => {
+        const file = ev.target.files[0];
+        if (!file) { imgPreview.classList.add('d-none'); return; }
+        const url = URL.createObjectURL(file);
+        imgPreview.src = url;
+        imgPreview.classList.remove('d-none');
+      });
+
+      // client-side validation + submit
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        formMsg.textContent = '';
+        // simple validation
+        if (!form.title.value.trim()) {
+          form.title.classList.add('is-invalid');
+          return;
+        } else {
+          form.title.classList.remove('is-invalid');
+        }
+        if (!imageInput.files[0]) {
+          imageInput.classList.add('is-invalid');
+          return;
+        } else {
+          imageInput.classList.remove('is-invalid');
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+
+        const fd = new FormData();
+        fd.append('title', form.title.value.trim());
+        fd.append('size', form.size.value.trim());
+        fd.append('age_group', form.age_group.value.trim());
+        fd.append('condition', form.condition.value.trim());
+        fd.append('notes', form.notes.value.trim());
+        fd.append('description', form.description.value.trim());
+        fd.append('image', imageInput.files[0]);
+
+        try {
+          const res = await fetch('/api/listings', { method: 'POST', body: fd });
+          if (!res.ok) {
+            const err = await res.json().catch(()=>({error: 'upload failed'}));
+            formMsg.innerHTML = `<div class="alert alert-danger">Error: ${err.error || res.statusText}</div>`;
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Listing';
+            return;
+          }
+          const created = await res.json();
+          formMsg.innerHTML = `<div class="alert alert-success">Listing created ✓</div>`;
+          // reset form (keep v small delay)
+          form.reset();
+          imgPreview.src = '';
+          imgPreview.classList.add('d-none');
+          descCount.textContent = `0 / ${desc.maxLength}`;
+          // reload listings
+          loadListings();
+        } catch (err) {
+          formMsg.innerHTML = `<div class="alert alert-danger">Network error</div>`;
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Listing';
+        }
+      });
+    });
+  </script>
+</body>
 </html>
